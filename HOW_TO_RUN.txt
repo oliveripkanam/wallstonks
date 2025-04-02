@@ -1,0 +1,27 @@
+WallStonks - How to Run
+======================
+
+There are two ways to run the WallStonks application:
+
+1. Using the Standalone Executable (Recommended):
+   - Navigate to the 'dist' folder
+   - Double-click on 'WallStonks.exe'
+   - The application will start and appear in your system tray (near the clock)
+   - Right-click on the tray icon to access the menu
+
+2. Using Python directly:
+   - Make sure Python 3.8+ is installed
+   - Install dependencies with: pip install -r requirements.txt
+   - Run the application with: python run.py
+
+IMPORTANT: First-time Setup
+--------------------------
+1. After starting the application, right-click on the tray icon and select "Settings"
+2. In the "General" tab, enter your Alpha Vantage API key
+   (Get a free API key from: https://www.alphavantage.co/support/#api-key)
+3. In the "Stocks" tab, add up to 5 stocks you want to track
+4. In the "Display" tab, select your preferred chart type and time range
+5. Click "Save" to apply your settings
+
+The application will update your wallpaper with stock charts according to your settings.
+You can right-click the tray icon at any time to refresh data, change settings, or exit the application. 
