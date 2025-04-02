@@ -1,0 +1,42 @@
+WallStonks: Real-time Stock Wallpaper Application
+
+Recommended Tech Stack:
+- Language: Python
+- GUI Framework: PyQt6/PySide6
+- Stock Data API: Alpha Vantage or Yahoo Finance API
+- Background Process: Windows Service/Task Scheduler
+
+Implementation Plan:
+
+1. Setup & Architecture
+- Create Windows application that starts minimized to system tray
+- Implement a configuration interface for settings
+- Use SQLite to store user preferences and stock selections
+
+2. Core Components
+- Main application with system tray icon
+- Configuration manager
+- API client for stock data
+- Chart rendering engine
+- Wallpaper setter
+- Background service for updates
+
+3. Development Steps
+- Build API client to fetch stock data (Alpha Vantage offers free tier)
+- Create chart rendering engine with customizable views
+- Implement wallpaper manager to set desktop background
+- Develop system tray interface with settings
+- Add background service for auto-updates
+- Package as standalone executable with PyInstaller
+
+4. Features Implementation
+- Stock Search: Autocomplete search box using API suggestions
+- Chart Types: Line charts and candlestick options
+- Time Ranges: Implement time range selector (1D to All Time)
+- Auto-refresh: Background thread that updates data at configurable intervals
+- Wallpaper Generation: Render charts to image and set as desktop background
+
+5. Packaging
+- Use PyInstaller to create standalone executable
+- Create installer with Inno Setup
+- Configure auto-start with Windows 
