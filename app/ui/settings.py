@@ -3,313 +3,369 @@
 
 import os
 import logging
-from pathlib import Path
-from PySide6.QtCore import Qt, Signal, QUrl
-from PySide6.QtGui import QIcon, QDesktopServices
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QLabel, 
-    QLineEdit, QComboBox, QPushButton, QGroupBox, QCheckBox,
-    QListWidget, QListWidgetItem, QSpinBox, QGridLayout,
-    QFormLayout, QFrame, QSizePolicy, QToolTip
-)
+import json
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, 
+                              QListWidget, QListWidgetItem, QPushButton, QLabel,
+                              QMessageBox, QDialog, QTabWidget, QGridLayout,
+                              QCheckBox, QComboBox, QSpinBox)
 
-from app.api.alphavantage import AlphaVantageClient
-from app.ui.components.autocomplete import StockListWidget
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-class SettingsDialog(QDialog):
-    """
-    Dialog for configuring application settings.
-    """
+# Mock stock data
+MOCK_STOCKS = [
+    ("AAPL", "Apple Inc."),
+    ("MSFT", "Microsoft Corporation"),
+    ("GOOGL", "Alphabet Inc."),
+    ("AMZN", "Amazon.com Inc."),
+    ("META", "Meta Platforms Inc."),
+    ("TSLA", "Tesla Inc."),
+    ("NVDA", "NVIDIA Corporation"),
+    ("JPM", "JPMorgan Chase & Co."),
+    ("NFLX", "Netflix Inc."),
+    ("DIS", "The Walt Disney Company")
+]
+
+class MockStockApiClient:
+    """Mock API client for stocks"""
     
-    # Signals
-    test_api_key_requested = Signal(str)
+    def __init__(self):
+        self.mock_data = MOCK_STOCKS
     
-    def __init__(self, config):
-        """
-        Initialize the settings dialog.
+    def search_symbol(self, query):
+        """Search for stock symbols"""
+        query = query.strip().upper()
+        results = []
+        for symbol, name in self.mock_data:
+            if query in symbol or query.lower() in name.lower():
+                results.append((symbol, name))
         
-        Args:
-            config (dict): Current configuration settings
-        """
-        super().__init__()
-        
-        self.config = config.copy()
-        self.setWindowTitle("WallStonks Settings")
-        self.setMinimumWidth(500)
-        self.setMinimumHeight(500)
-        
-        # Create the layout
-        self.create_layout()
-        
-        # Load current settings
-        self.load_settings()
+        if not results and len(query) <= 5:
+            results.append((query, "Search term"))
+            
+        return results
+
+class StockSearchCompleter(QWidget):
+    """Stock symbol search widget"""
     
-    def create_layout(self):
-        """Create the dialog layout."""
-        # Main layout
-        main_layout = QVBoxLayout(self)
-        
-        # Create tab widget
-        self.tab_widget = QTabWidget()
-        
-        # Add tabs
-        self.tab_widget.addTab(self.create_general_tab(), "General")
-        self.tab_widget.addTab(self.create_stocks_tab(), "Stocks")
-        self.tab_widget.addTab(self.create_display_tab(), "Display")
-        
-        main_layout.addWidget(self.tab_widget)
-        
-        # Add buttons
-        button_layout = QHBoxLayout()
-        
-        self.save_button = QPushButton("Save")
-        self.save_button.clicked.connect(self.accept)
-        
-        self.cancel_button = QPushButton("Cancel")
-        self.cancel_button.clicked.connect(self.reject)
-        
-        button_layout.addWidget(self.cancel_button)
-        button_layout.addWidget(self.save_button)
-        
-        main_layout.addLayout(button_layout)
+    stock_selected = Signal(str)
     
-    def create_general_tab(self):
-        """Create the general settings tab."""
-        # Create tab widget
-        tab = QFrame()
-        layout = QVBoxLayout(tab)
+    def __init__(self, api_client=None, parent=None):
+        super().__init__(parent)
         
-        # API key group
-        api_group = QGroupBox("Alpha Vantage API Key")
-        api_layout = QVBoxLayout(api_group)
+        self.api_client = MockStockApiClient() if api_client is None else api_client
         
-        # Help text
-        help_text = QLabel("You need an Alpha Vantage API key to fetch stock data.")
-        help_text.setWordWrap(True)
-        api_layout.addWidget(help_text)
+        # Set up UI
+        layout = QVBoxLayout(self)
         
-        # Get key link
-        api_link = QPushButton("Get a free API key")
-        api_link.clicked.connect(self.open_api_website)
-        api_layout.addWidget(api_link)
+        # Search input
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Enter stock symbol or company name")
+        layout.addWidget(self.search_input)
         
-        # API key input
-        key_layout = QHBoxLayout()
-        self.api_key_input = QLineEdit()
-        self.api_key_input.setPlaceholderText("Enter your Alpha Vantage API key")
-        self.api_key_input.setEchoMode(QLineEdit.PasswordEchoOnEdit)
+        # Results list
+        self.results_list = QListWidget()
+        layout.addWidget(self.results_list)
         
-        test_button = QPushButton("Test Key")
-        test_button.clicked.connect(self.test_api_key)
+        # Connect signals
+        self.search_input.textChanged.connect(self.perform_search)
+        self.results_list.itemClicked.connect(self.on_item_clicked)
         
-        key_layout.addWidget(self.api_key_input)
-        key_layout.addWidget(test_button)
-        
-        api_layout.addLayout(key_layout)
-        layout.addWidget(api_group)
-        
-        # Update interval
-        update_group = QGroupBox("Update Settings")
-        update_layout = QFormLayout(update_group)
-        
-        # Update interval input
-        self.update_interval_input = QSpinBox()
-        self.update_interval_input.setMinimum(1)
-        self.update_interval_input.setMaximum(60)
-        self.update_interval_input.setSuffix(" minutes")
-        update_layout.addRow("Update Interval:", self.update_interval_input)
-        
-        # Trading hours only checkbox
-        self.trading_hours_only = QCheckBox("Only update during trading hours (9:30 AM - 4:00 PM ET, weekdays)")
-        update_layout.addRow("", self.trading_hours_only)
-        
-        layout.addWidget(update_group)
-        
-        # Add spacer
-        layout.addStretch()
-        
-        return tab
+        self.setLayout(layout)
     
-    def create_stocks_tab(self):
-        """Create the stocks selection tab."""
-        # Create tab widget
-        tab = QFrame()
-        layout = QVBoxLayout(tab)
-        
-        # Add explanatory text
-        help_text = QLabel("Add up to 5 stocks to display on your wallpaper:")
-        help_text.setWordWrap(True)
-        layout.addWidget(help_text)
-        
-        # Create stock list widget with search
-        self.stock_list_widget = StockListWidget(self.config.get("stocks", []))
-        layout.addWidget(self.stock_list_widget)
-        
-        return tab
-    
-    def create_display_tab(self):
-        """Create the display settings tab."""
-        # Create tab widget
-        tab = QFrame()
-        layout = QVBoxLayout(tab)
-        
-        # Chart type group
-        chart_group = QGroupBox("Chart Type")
-        chart_layout = QVBoxLayout(chart_group)
-        
-        # Chart type selection
-        self.chart_type_combo = QComboBox()
-        self.chart_type_combo.addItem("Line Chart", "line")
-        self.chart_type_combo.addItem("Candlestick Chart", "candlestick")
-        chart_layout.addWidget(self.chart_type_combo)
-        
-        layout.addWidget(chart_group)
-        
-        # Time range group
-        time_group = QGroupBox("Time Range")
-        time_layout = QGridLayout(time_group)
-        
-        # Time range options
-        self.time_range_combos = {}
-        
-        ranges = [
-            ("1 Day", "1d"), 
-            ("3 Days", "3d"), 
-            ("1 Week", "1w"),
-            ("1 Month", "1m"), 
-            ("3 Months", "3m"), 
-            ("6 Months", "6m"),
-            ("1 Year", "1y"), 
-            ("All Time", "all")
-        ]
-        
-        row, col = 0, 0
-        for label, value in ranges:
-            radio = QCheckBox(label)
-            radio.clicked.connect(lambda checked, v=value: self.set_time_range(v))
-            self.time_range_combos[value] = radio
-            time_layout.addWidget(radio, row, col)
-            col += 1
-            if col > 3:  # 4 columns
-                col = 0
-                row += 1
-        
-        layout.addWidget(time_group)
-        
-        # Visual options group
-        visual_group = QGroupBox("Visual Options")
-        visual_layout = QVBoxLayout(visual_group)
-        
-        # Theme selection
-        self.dark_theme_checkbox = QCheckBox("Dark Theme")
-        visual_layout.addWidget(self.dark_theme_checkbox)
-        
-        # Show grid
-        self.show_grid_checkbox = QCheckBox("Show Grid")
-        visual_layout.addWidget(self.show_grid_checkbox)
-        
-        # Show volume
-        self.show_volume_checkbox = QCheckBox("Show Volume")
-        visual_layout.addWidget(self.show_volume_checkbox)
-        
-        layout.addWidget(visual_group)
-        
-        # Add spacer
-        layout.addStretch()
-        
-        return tab
-    
-    def set_time_range(self, value):
-        """
-        Set the time range by unchecking all other options.
-        
-        Args:
-            value (str): The time range value to set
-        """
-        # Uncheck all other time range options
-        for range_value, checkbox in self.time_range_combos.items():
-            if range_value != value:
-                checkbox.setChecked(False)
-        
-        # Ensure the selected option is checked
-        self.time_range_combos[value].setChecked(True)
-    
-    def open_api_website(self):
-        """Open the Alpha Vantage website to get an API key."""
-        QDesktopServices.openUrl(QUrl("https://www.alphavantage.co/support/#api-key"))
-    
-    def test_api_key(self):
-        """Test the current API key."""
-        api_key = self.api_key_input.text().strip()
-        if not api_key:
-            QToolTip.showText(self.api_key_input.mapToGlobal(self.api_key_input.rect().bottomRight()), 
-                             "Please enter an API key first")
+    def perform_search(self, text):
+        """Execute the search"""
+        query = text
+        if len(query) < 2:
+            self.results_list.clear()
             return
         
-        # Emit signal to test the key
-        self.test_api_key_requested.emit(api_key)
+        try:
+            results = self.api_client.search_symbol(query)
+            
+            # Update the results list
+            self.results_list.clear()
+            for symbol, name in results:
+                item = QListWidgetItem(f"{symbol} - {name}")
+                item.setData(Qt.UserRole, symbol)
+                self.results_list.addItem(item)
+                
+        except Exception as e:
+            logger.warning(f"Search failed: {e}")
+            self.results_list.clear()
+            if len(query) <= 5:
+                item = QListWidgetItem(f"{query.upper()} - Search term")
+                item.setData(Qt.UserRole, query.upper())
+                self.results_list.addItem(item)
+    
+    def on_item_clicked(self, item):
+        """Handle item selection from results list"""
+        symbol = item.data(Qt.UserRole)
+        self.stock_selected.emit(symbol)
+        self.search_input.clear()
+        self.results_list.clear()
+
+class StockListWidget(QWidget):
+    """Widget that shows the selected stocks"""
+    
+    def __init__(self, stocks=None, parent=None):
+        super().__init__(parent)
+        self.stocks = []
+        
+        # Set up UI
+        layout = QVBoxLayout(self)
+        
+        # Create mock API client for the search completer
+        mock_api = MockStockApiClient()
+        
+        # Add search completer
+        self.search_completer = StockSearchCompleter(api_client=mock_api, parent=self)
+        layout.addWidget(self.search_completer)
+        
+        # Label for selected stocks
+        layout.addWidget(QLabel("Selected Stocks:"))
+        
+        # List of selected stocks
+        self.stock_list = QListWidget()
+        layout.addWidget(self.stock_list)
+        
+        # Remove button
+        self.remove_btn = QPushButton("Remove Selected")
+        layout.addWidget(self.remove_btn)
+        
+        # Connect signals
+        self.search_completer.stock_selected.connect(self.add_stock)
+        self.remove_btn.clicked.connect(self.remove_selected_stock)
+        
+        self.setLayout(layout)
+        
+        # Set initial stocks
+        if stocks:
+            self.set_stocks(stocks)
+    
+    def add_stock(self, symbol):
+        """Add a stock to the list"""
+        if symbol not in self.stocks and len(self.stocks) < 5:
+            self.stocks.append(symbol)
+            self.stock_list.addItem(symbol)
+            return True
+        elif symbol in self.stocks:
+            QMessageBox.information(self, "Stock Already Added", 
+                                   f"The stock {symbol} is already in your list.")
+        elif len(self.stocks) >= 5:
+            QMessageBox.warning(self, "Maximum Stocks Reached", 
+                               "You can track a maximum of 5 stocks. Remove one to add another.")
+        return False
+    
+    def remove_selected_stock(self):
+        """Remove the selected stock"""
+        selected_items = self.stock_list.selectedItems()
+        if not selected_items:
+            return
+            
+        for item in selected_items:
+            symbol = item.text()
+            if symbol in self.stocks:
+                self.stocks.remove(symbol)
+            row = self.stock_list.row(item)
+            self.stock_list.takeItem(row)
+    
+    def set_stocks(self, stocks):
+        """Set the list of stocks"""
+        self.stocks = stocks[:5] if stocks else []  # Max 5 stocks
+        self.stock_list.clear()
+        for stock in self.stocks:
+            self.stock_list.addItem(stock)
+    
+    def get_stocks(self):
+        """Get the list of stocks"""
+        return self.stocks
+    
+    def get_selected_stocks(self):
+        """Alias for get_stocks to maintain compatibility"""
+        return self.get_stocks()
+
+# Key fix: SettingsDialog that can handle config-first initialization
+class SettingsDialog(QDialog):
+    """Settings dialog for configuring the application."""
+    
+    test_api_key_requested = Signal(str)
+    
+    def __init__(self, *args, **kwargs):
+        """Initialize with flexible argument handling."""
+        # Handle both calling patterns
+        if args and isinstance(args[0], dict):
+            # First arg is config, second (if exists) is parent
+            config = args[0]
+            parent = args[1] if len(args) > 1 else None
+            # Call QDialog.__init__ with parent only
+            super().__init__(parent)
+            self.config = config
+        else:
+            # Normal case - parent first, then config
+            parent = args[0] if args else None
+            config = args[1] if len(args) > 1 else kwargs.get('config', {})
+            super().__init__(parent)
+            self.config = config or {}
+        
+        # Setup dialog
+        self.setWindowTitle("Settings")
+        self.setMinimumWidth(450)
+        self.setMinimumHeight(400)
+        
+        self.init_ui()
+        self.load_settings()
+    
+    def init_ui(self):
+        """Initialize the UI."""
+        # Main layout
+        layout = QVBoxLayout(self)
+        
+        # Tab widget
+        self.tabs = QTabWidget()
+        
+        # Create tabs
+        self.tab_general = QWidget()
+        self.tab_stocks = QWidget()
+        self.tab_display = QWidget()
+        
+        self.tabs.addTab(self.tab_general, "General")
+        self.tabs.addTab(self.tab_stocks, "Stocks")
+        self.tabs.addTab(self.tab_display, "Display")
+        
+        # Setup tab contents
+        self.setup_general_tab()
+        self.setup_stocks_tab()
+        self.setup_display_tab()
+        
+        # Add tabs to layout
+        layout.addWidget(self.tabs)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        self.save_button = QPushButton("Save")
+        self.cancel_button = QPushButton("Cancel")
+        
+        button_layout.addWidget(self.save_button)
+        button_layout.addWidget(self.cancel_button)
+        
+        layout.addLayout(button_layout)
+        
+        # Connect signals
+        self.save_button.clicked.connect(self.save_settings)
+        self.cancel_button.clicked.connect(self.reject)
+        
+        self.setLayout(layout)
+    
+    def setup_general_tab(self):
+        """Setup the general settings tab."""
+        layout = QGridLayout(self.tab_general)
+        
+        # API Key
+        layout.addWidget(QLabel("API Key:"), 0, 0)
+        self.api_key_input = QLineEdit()
+        self.api_key_input.setPlaceholderText("Enter your API key")
+        layout.addWidget(self.api_key_input, 0, 1)
+        
+        # Refresh Interval
+        layout.addWidget(QLabel("Refresh Interval (seconds):"), 1, 0)
+        self.refresh_interval = QSpinBox()
+        self.refresh_interval.setMinimum(5)
+        self.refresh_interval.setMaximum(3600)
+        self.refresh_interval.setValue(30)
+        layout.addWidget(self.refresh_interval, 1, 1)
+        
+        # Auto-start
+        self.auto_start = QCheckBox("Start with Windows")
+        layout.addWidget(self.auto_start, 2, 0, 1, 2)
+        
+        # Startup mode
+        layout.addWidget(QLabel("Startup Mode:"), 3, 0)
+        self.startup_mode = QComboBox()
+        self.startup_mode.addItems(["Normal", "Minimized to Tray"])
+        layout.addWidget(self.startup_mode, 3, 1)
+        
+        # Add some stretch at the bottom
+        layout.setRowStretch(4, 1)
+        
+        self.tab_general.setLayout(layout)
+    
+    def setup_stocks_tab(self):
+        """Setup the stocks settings tab."""
+        layout = QVBoxLayout(self.tab_stocks)
+        
+        # Stock list
+        layout.addWidget(QLabel("Select stocks to track (max 5):"))
+        
+        # Stock search widget
+        self.stock_list_widget = StockListWidget()
+        layout.addWidget(self.stock_list_widget)
+        
+        self.tab_stocks.setLayout(layout)
+    
+    def setup_display_tab(self):
+        """Setup the display settings tab."""
+        layout = QVBoxLayout(self.tab_display)
+        
+        # Chart settings
+        layout.addWidget(QLabel("Chart Type:"))
+        self.chart_type = QComboBox()
+        self.chart_type.addItems(["Candlestick", "Line", "OHLC"])
+        layout.addWidget(self.chart_type)
+        
+        # Display options
+        self.show_volume = QCheckBox("Show Volume")
+        self.dark_mode = QCheckBox("Dark Mode")
+        
+        layout.addWidget(self.show_volume)
+        layout.addWidget(self.dark_mode)
+        
+        # Add stretch at the bottom
+        layout.addStretch()
+        
+        self.tab_display.setLayout(layout)
     
     def load_settings(self):
-        """Load the current settings into the UI."""
-        # API key
-        self.api_key_input.setText(self.config.get("api_key", ""))
-        
-        # Update interval
-        self.update_interval_input.setValue(self.config.get("update_interval", 15))
-        
-        # Trading hours only
-        self.trading_hours_only.setChecked(self.config.get("trading_hours_only", True))
-        
-        # Chart type
-        chart_type = self.config.get("chart_type", "line")
-        index = self.chart_type_combo.findData(chart_type)
-        if index >= 0:
-            self.chart_type_combo.setCurrentIndex(index)
-        
-        # Time range
-        time_range = self.config.get("time_range", "1d")
-        if time_range in self.time_range_combos:
-            self.time_range_combos[time_range].setChecked(True)
-        
-        # Visual options
-        self.dark_theme_checkbox.setChecked(self.config.get("dark_theme", True))
-        self.show_grid_checkbox.setChecked(self.config.get("show_grid", True))
-        self.show_volume_checkbox.setChecked(self.config.get("show_volume", True))
+        """Load settings from config."""
+        try:
+            # General tab
+            self.api_key_input.setText(self.config.get("api_key", ""))
+            self.refresh_interval.setValue(self.config.get("refresh_interval", 30))
+            self.auto_start.setChecked(self.config.get("auto_start", False))
+            
+            # Stocks tab
+            stocks = self.config.get("stocks", [])
+            if stocks:
+                self.stock_list_widget.set_stocks(stocks)
+            
+            # Display tab
+            self.show_volume.setChecked(self.config.get("show_volume", True))
+            self.dark_mode.setChecked(self.config.get("dark_mode", False))
+            
+        except Exception as e:
+            logger.error(f"Error loading settings: {e}")
     
+    def save_settings(self):
+        """Save settings to config and accept the dialog."""
+        try:
+            # General tab
+            self.config["api_key"] = self.api_key_input.text()
+            self.config["refresh_interval"] = self.refresh_interval.value()
+            self.config["auto_start"] = self.auto_start.isChecked()
+            
+            # Stocks tab
+            self.config["stocks"] = self.stock_list_widget.get_stocks()
+            
+            # Display tab
+            self.config["show_volume"] = self.show_volume.isChecked()
+            self.config["dark_mode"] = self.dark_mode.isChecked()
+            
+            self.accept()
+            
+        except Exception as e:
+            logger.error(f"Error saving settings: {e}")
+            QMessageBox.critical(self, "Error", f"Failed to save settings: {e}")
+            
     def get_config(self):
-        """
-        Get the updated configuration from the UI.
-        
-        Returns:
-            dict: The updated configuration
-        """
-        # Start with the existing config
-        updated_config = self.config.copy()
-        
-        # Update with new values
-        updated_config["api_key"] = self.api_key_input.text().strip()
-        updated_config["update_interval"] = self.update_interval_input.value()
-        updated_config["trading_hours_only"] = self.trading_hours_only.isChecked()
-        
-        # Get selected stocks
-        updated_config["stocks"] = self.stock_list_widget.get_selected_stocks()
-        
-        # Chart type
-        updated_config["chart_type"] = self.chart_type_combo.currentData()
-        
-        # Time range
-        for value, checkbox in self.time_range_combos.items():
-            if checkbox.isChecked():
-                updated_config["time_range"] = value
-                break
-        
-        # Visual options
-        updated_config["dark_theme"] = self.dark_theme_checkbox.isChecked()
-        updated_config["show_grid"] = self.show_grid_checkbox.isChecked()
-        updated_config["show_volume"] = self.show_volume_checkbox.isChecked()
-        
-        return updated_config 
+        """Return the current configuration."""
+        return self.config
