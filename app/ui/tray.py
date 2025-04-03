@@ -101,7 +101,7 @@ class SystemTrayIcon(QSystemTrayIcon):
     
     def open_settings(self):
         """Open the settings dialog."""
-        dialog = SettingsDialog(self.config, None)
+        dialog = SettingsDialog(self.config)
         dialog.settingsChanged.connect(self.on_settings_changed)
         dialog.exec()
     

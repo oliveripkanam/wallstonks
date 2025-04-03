@@ -116,7 +116,9 @@ class StockSearchCompleter(QWidget):
             return
         
         if not self.client:
-            logger.warning("No API client available for search")
+            logger.warning("No API client available for search, attempting to initialize...")
+        from app.api.client import StockDataClient
+        self.api_client = StockDataClient()
             return
         
         # Don't start a new search if one is already in progress
