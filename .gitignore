@@ -48,4 +48,8 @@ ENV/
 
 # OS specific files
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Specific large files
+dist/WallStonks.exe
+build/WallStonks/WallStonks.pkg 
