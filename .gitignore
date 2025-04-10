@@ -1,0 +1,51 @@
+# Build artifacts
+dist/
+build/
+*.spec
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environment
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS specific files
+.DS_Store
+Thumbs.db 
