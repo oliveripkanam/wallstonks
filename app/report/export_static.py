@@ -106,6 +106,14 @@ def export_docs():
     forecast = daily_forecast_heuristic()
     (data_dir / "forecast.json").write_text(json.dumps(forecast, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
+    # Model forecast (stub)
+    try:
+        from app.models.infer import forecast_from_features
+        mf = forecast_from_features(features)
+        (data_dir / "forecast_model.json").write_text(json.dumps(mf, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    except Exception:
+        pass
+
     # Copy styles.css if present
     styles_src = root / "app" / "static" / "styles.css"
     if styles_src.exists():

@@ -117,3 +117,15 @@ async def forecast():
         return JSONResponse({"error": f"forecast_failed: {e}"}, status_code=500)
 
 
+@app.get("/api/forecast_model", response_class=JSONResponse)
+async def forecast_model():
+    try:
+        from app.features.aggregate import features_snapshot
+        from app.models.infer import forecast_from_features
+        feats = features_snapshot()
+        data = forecast_from_features(feats)
+        return JSONResponse(data)
+    except Exception as e:
+        return JSONResponse({"error": f"forecast_model_failed: {e}"}, status_code=500)
+
+
