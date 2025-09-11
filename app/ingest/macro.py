@@ -40,3 +40,27 @@ def fetch_nfp_stub() -> MacroValue:
     )
 
 
+def fetch_ism_pmi_stub() -> MacroValue:
+    # Stubbed ISM Manufacturing PMI
+    return MacroValue(
+        key="ism_pmi",
+        label="ISM Manufacturing PMI",
+        value=48.6,
+        unit="index",
+        period="Aug 2025",
+        as_of=datetime.utcnow(),
+    )
+
+
+def fetch_confidence_stub() -> MacroValue:
+    # Stubbed Conference Board Consumer Confidence
+    return MacroValue(
+        key="confidence",
+        label="Consumer Confidence (Conference Board)",
+        value=104.2,
+        unit="index",
+        period="Aug 2025",
+        as_of=datetime.utcnow(),
+    )
+
+

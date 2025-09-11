@@ -116,6 +116,16 @@
                 if (typeof s !== 'number') return '—';
                 return `${s.toFixed(3)} ${v.note ? `(${v.note})` : ''}`.trim();
               }
+              case 'ism_pmi': {
+                const val = v.value !== undefined ? v.value : null;
+                const period = v.period || '';
+                return val !== null ? `${val} (${period})` : '—';
+              }
+              case 'confidence': {
+                const val = v.value !== undefined ? v.value : null;
+                const period = v.period || '';
+                return val !== null ? `${val} (${period})` : '—';
+              }
               case 'trends': {
                 const z = v.zscore;
                 if (typeof z !== 'number') return '—';

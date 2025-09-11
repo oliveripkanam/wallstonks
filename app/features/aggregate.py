@@ -4,7 +4,7 @@
 from typing import Dict, Any
 from datetime import datetime
 
-from app.ingest.macro import fetch_cpi_stub, fetch_nfp_stub
+from app.ingest.macro import fetch_cpi_stub, fetch_nfp_stub, fetch_ism_pmi_stub, fetch_confidence_stub
 from app.ingest.reddit import fetch_reddit_sentiment_stub, fetch_reddit_sentiment
 from app.ingest.trends import fetch_trends_stub, fetch_trends
 from app.ingest.news import aggregate_news_sentiment
@@ -16,6 +16,8 @@ def latest_snapshot() -> Dict[str, Any]:
     """Return a minimal snapshot for the glossary page."""
     cpi = fetch_cpi_stub()
     nfp = fetch_nfp_stub()
+    pmi = fetch_ism_pmi_stub()
+    conf = fetch_confidence_stub()
     # Load config for reddit subs
     reddit = fetch_reddit_sentiment_stub()
     try:
@@ -56,6 +58,16 @@ def latest_snapshot() -> Dict[str, Any]:
             "value": nfp.value,
             "unit": nfp.unit,
             "period": nfp.period,
+        },
+        "ism_pmi": {
+            "value": pmi.value,
+            "unit": pmi.unit,
+            "period": pmi.period,
+        },
+        "confidence": {
+            "value": conf.value,
+            "unit": conf.unit,
+            "period": conf.period,
         },
         "reddit_sentiment": {
             "score": reddit.score,
