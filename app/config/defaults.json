@@ -1,0 +1,20 @@
+{
+  "sources": {
+    "news": [
+      { "name": "Reuters Business", "url": "https://feeds.reuters.com/reuters/businessNews", "weight": 1.0 },
+      { "name": "Reuters Markets", "url": "https://feeds.reuters.com/reuters/USMarketNews", "weight": 1.0 },
+      { "name": "CNBC Markets", "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html", "weight": 0.8 }
+    ],
+    "reddit": {
+      "subreddits": ["wallstreetbets", "investing", "stocks", "economy"]
+    },
+    "trends": {
+      "terms": ["inflation", "recession", "rate cut", "layoffs", "CPI", "FOMC"]
+    }
+  },
+  "nlp": {
+    "decay": { "news_half_life_hours": 6, "social_half_life_hours": 2 }
+  }
+}
+
+
