@@ -11,10 +11,33 @@ from app.ingest.news import aggregate_news_sentiment
 import json
 from pathlib import Path
 import math
+import time
+
+
+_CACHE_TTL_SECONDS = 180
+_cache_store: Dict[str, Any] = {}
+_cache_time: Dict[str, float] = {}
+
+
+def _get_cached(key: str):
+    ts = _cache_time.get(key)
+    if ts is None:
+        return None
+    if (time.time() - ts) > _CACHE_TTL_SECONDS:
+        return None
+    return _cache_store.get(key)
+
+
+def _set_cached(key: str, value: Any):
+    _cache_store[key] = value
+    _cache_time[key] = time.time()
 
 
 def latest_snapshot() -> Dict[str, Any]:
     """Return a minimal snapshot for the glossary page."""
+    cached = _get_cached("latest_snapshot")
+    if cached is not None:
+        return cached
     cpi = fetch_cpi_stub()
     nfp = fetch_nfp_stub()
     pmi = fetch_ism_pmi_stub()
@@ -48,7 +71,7 @@ def latest_snapshot() -> Dict[str, Any]:
     except Exception:
         news = None
 
-    return {
+    result = {
         "as_of": datetime.utcnow().isoformat() + "Z",
         "cpi": {
             "value": cpi.value,
@@ -84,10 +107,15 @@ def latest_snapshot() -> Dict[str, Any]:
             "n": news.n_titles,
         } if news else None),
     }
+    _set_cached("latest_snapshot", result)
+    return result
 
 
 def features_snapshot() -> Dict[str, Any]:
     """Return a minimal composite feature set for the day."""
+    cached = _get_cached("features_snapshot")
+    if cached is not None:
+        return cached
     # Load config
     cfg = {}
     try:
@@ -122,6 +150,7 @@ def features_snapshot() -> Dict[str, Any]:
         "ism_pmi_dev_from_50": (pmi.value - 50.0) if pmi.value is not None else None,
         "consumer_confidence": conf.value,
     }
+    _set_cached("features_snapshot", features)
     return features
 
 
@@ -225,5 +254,6 @@ def daily_forecast_heuristic() -> Dict[str, Any]:
         },
         "meta": {"model": "heuristic_v1", "notes": "Public-signal composite; no prices used."}
     }
+    _set_cached("daily_forecast_heuristic", payload)
     return payload
 

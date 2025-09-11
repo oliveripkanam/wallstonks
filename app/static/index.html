@@ -49,6 +49,7 @@
 
         <section class="mb-8" x-show="!forecastLoading">
           <h2 class="text-xl font-semibold mb-3">Daily Forecast</h2>
+          <p class="text-zinc-400 text-sm mb-3">Heuristic composite from public signals (News, Reddit, Trends, PMI). No prices used. Prob up = confidence the index closes higher; expected move is open→close. Ranges are rough 50%/80% bands.</p>
           <template x-if="forecastError">
             <div class="mb-3 text-sm text-red-300 bg-red-900/40 border border-red-800 rounded px-3 py-2" x-text="forecastError"></div>
           </template>
@@ -61,7 +62,7 @@
                 <div class="text-xs text-zinc-400 mt-1">50%: <span x-text="fmtRange(v.interval_pct.p50_low, v.interval_pct.p50_high)"></span> · 80%: <span x-text="fmtRange(v.interval_pct.p80_low, v.interval_pct.p80_high)"></span></div>
                 <div class="mt-2 text-xs text-zinc-400">Top drivers:
                   <template x-for="d in v.drivers.slice(0,3)" :key="d.name">
-                    <span class="inline-block mr-2">{{d.name}} <span class="text-zinc-300" x-text="d.contribution.toFixed(2)"></span></span>
+                    <span class="inline-flex items-center gap-1 mr-3"><span class="text-zinc-300" x-text="d.name"></span><span class="text-zinc-400" x-text="d.contribution.toFixed(2)"></span></span>
                   </template>
                 </div>
               </div>
