@@ -76,9 +76,15 @@
           async init() {
             this.loading = true; this.error = '';
             try {
-              const res = await fetch('/api/glossary');
-              if (!res.ok) throw new Error(`HTTP ${res.status}`);
-              const data = await res.json();
+              let data;
+              try {
+                const res = await fetch('/api/glossary');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                data = await res.json();
+              } catch (_) {
+                const res2 = await fetch('./data/glossary.json');
+                data = await res2.json();
+              }
               if (data.meta && data.meta.error) this.error = data.meta.error;
               this.items = data.items || [];
             } catch (e) {
