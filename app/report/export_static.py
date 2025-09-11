@@ -101,6 +101,11 @@ def export_docs():
     features = features_snapshot()
     (data_dir / "features.json").write_text(json.dumps(features, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
+    # Forecast
+    from app.features.aggregate import daily_forecast_heuristic
+    forecast = daily_forecast_heuristic()
+    (data_dir / "forecast.json").write_text(json.dumps(forecast, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
     # Copy styles.css if present
     styles_src = root / "app" / "static" / "styles.css"
     if styles_src.exists():

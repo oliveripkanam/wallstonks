@@ -107,3 +107,13 @@ async def features():
         return JSONResponse({"error": f"features_failed: {e}"}, status_code=500)
 
 
+@app.get("/api/forecast", response_class=JSONResponse)
+async def forecast():
+    try:
+        from app.features.aggregate import daily_forecast_heuristic
+        data = daily_forecast_heuristic()
+        return JSONResponse(data)
+    except Exception as e:
+        return JSONResponse({"error": f"forecast_failed: {e}"}, status_code=500)
+
+
