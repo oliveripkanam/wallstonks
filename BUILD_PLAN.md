@@ -37,6 +37,12 @@ Goal: Daily, pre-open forecast of SPY/DIA direction and expected move using publ
 - Config in JSON/YAML (sources, topic labels, weights, decay half-lives, trends terms)
 - Logging to files; cached raws under data/ (gitignored); resilience with retries/backoff
 
+### Production (GitHub Pages) delivery
+- Static export script writes `docs/index.html` and `docs/data/*.json` (no /api calls in prod)
+- CSS: `npm run build:css` outputs `app/static/styles.css` → copy to `docs/styles.css`
+- Cron GitHub Actions workflow (daily): setup Python+Node → run exporter → commit to `main` (docs/) or deploy to `gh-pages`
+- Pages settings: Source = `Deploy from a branch`, Branch = `main`, Folder = `/docs`
+
 ## 6) Minimal Folder Layout
 - app/
   - ingest/ (rss.py, macro.py, reddit.py, trends.py, gdelt.py optional)
@@ -53,6 +59,7 @@ Goal: Daily, pre-open forecast of SPY/DIA direction and expected move using publ
 - M3: Daily feature vector by 9:25 ET → JSON/CLI report
 - M4: Baseline models trained & calibrated → expected move + intervals
 - M5: Glossary page generated daily with latest values and formulas
+- M6: Static export + GitHub Pages nightly publish
 
 ## 8) Dependencies (add as needed)
 - requests, feedparser, pandas, numpy, python-dateutil, pytz
