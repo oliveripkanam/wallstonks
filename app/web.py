@@ -97,3 +97,13 @@ async def glossary():
     return JSONResponse({"items": items, "as_of": snap.get("as_of"), "meta": {"error": snap.get("_error")}})
 
 
+@app.get("/api/features", response_class=JSONResponse)
+async def features():
+    try:
+        from app.features.aggregate import features_snapshot
+        data = features_snapshot()
+        return JSONResponse(data)
+    except Exception as e:
+        return JSONResponse({"error": f"features_failed: {e}"}, status_code=500)
+
+

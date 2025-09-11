@@ -85,3 +85,41 @@ def latest_snapshot() -> Dict[str, Any]:
     }
 
 
+def features_snapshot() -> Dict[str, Any]:
+    """Return a minimal composite feature set for the day."""
+    # Load config
+    cfg = {}
+    try:
+        cfg_path = Path(__file__).parents[1] / "config" / "defaults.json"
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+
+    # Reddit sentiment
+    reddit = fetch_reddit_sentiment_stub()
+    try:
+        subs = cfg.get("sources", {}).get("reddit", {}).get("subreddits", [])
+        if subs:
+            reddit = fetch_reddit_sentiment(subs)
+    except Exception:
+        pass
+
+    # Trends (inflation term as example)
+    try:
+        tr = fetch_trends("inflation")
+    except Exception:
+        tr = fetch_trends_stub("inflation")
+
+    # Macro levels (use stubs for now)
+    pmi = fetch_ism_pmi_stub()
+    conf = fetch_confidence_stub()
+
+    features: Dict[str, Any] = {
+        "as_of": datetime.utcnow().isoformat() + "Z",
+        "reddit_sentiment": reddit.score,
+        "trends_inflation_z": tr.zscore,
+        "ism_pmi_dev_from_50": (pmi.value - 50.0) if pmi.value is not None else None,
+        "consumer_confidence": conf.value,
+    }
+    return features
+
