@@ -6,7 +6,8 @@ from datetime import datetime
 
 from app.ingest.macro import fetch_cpi_stub, fetch_nfp_stub
 from app.ingest.reddit import fetch_reddit_sentiment_stub, fetch_reddit_sentiment
-from app.ingest.trends import fetch_trends_stub
+from app.ingest.trends import fetch_trends_stub, fetch_trends
+from app.ingest.news import aggregate_news_sentiment
 import json
 from pathlib import Path
 
@@ -25,7 +26,24 @@ def latest_snapshot() -> Dict[str, Any]:
             reddit = fetch_reddit_sentiment(subs)
     except Exception:
         pass
+    # trends (real with fallback)
     trends = fetch_trends_stub("inflation")
+    try:
+        trends = fetch_trends("inflation")
+    except Exception:
+        pass
+
+    # news sentiment (RSS + VADER)
+    news = None
+    try:
+        feeds = []
+        news_cfg = cfg.get("sources", {}).get("news", []) if 'cfg' in locals() else []
+        for entry in news_cfg:
+            feeds.append((entry.get('name', 'News'), entry.get('url', '')))
+        if feeds:
+            news = aggregate_news_sentiment(feeds)
+    except Exception:
+        news = None
 
     return {
         "as_of": datetime.utcnow().isoformat() + "Z",
@@ -48,6 +66,10 @@ def latest_snapshot() -> Dict[str, Any]:
             "zscore": trends.zscore,
             "note": trends.note,
         },
+        "news_sentiment": ({
+            "score": news.score,
+            "n": news.n_titles,
+        } if news else None),
     }
 
 

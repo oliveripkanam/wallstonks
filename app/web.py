@@ -31,6 +31,15 @@ async def glossary():
         snap = {"as_of": None, "_error": f"aggregation_failed: {e}"}
     items = [
         {
+            "key": "news_sentiment",
+            "name": "News Sentiment",
+            "category": "News",
+            "source": "RSS (Reuters, CNBC, etc.)",
+            "definition": "Average VADER compound sentiment across recent curated headlines.",
+            "latest": snap.get("news_sentiment"),
+            "calculation": "avg(VADER_compound(headlines))",
+        },
+        {
             "key": "cpi",
             "name": "Consumer Price Index (CPI)",
             "category": "Inflation",

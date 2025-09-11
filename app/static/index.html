@@ -38,7 +38,7 @@
                   <div class="font-medium" x-text="item.name"></div>
                   <div class="text-xs text-zinc-400" x-text="item.category + ' · Source: ' + item.source"></div>
                 </div>
-                <div class="text-xs text-zinc-400">Latest: <span x-text="formatLatest(item.latest)"></span></div>
+                <div class="text-xs text-zinc-400">Latest: <span x-text="formatDisplay(item)"></span></div>
               </summary>
               <div class="px-4 py-4 bg-zinc-950">
                 <p class="text-sm text-zinc-300" x-text="item.definition"></p>
@@ -76,10 +76,39 @@
               return inQuery && inCat;
             });
           },
-          formatLatest(v) {
+          formatDisplay(item) {
+            const v = item.latest;
             if (!v) return '—';
-            if (typeof v === 'object') return JSON.stringify(v);
-            return String(v);
+            switch (item.key) {
+              case 'cpi': {
+                const val = v.value !== undefined ? v.value : null;
+                const unit = v.unit || '';
+                const period = v.period || '';
+                return val !== null ? `${val}${unit ? unit : ''} (${period})` : '—';
+              }
+              case 'nfp': {
+                const val = v.value !== undefined ? v.value : null;
+                const unit = v.unit || '';
+                const period = v.period || '';
+                return val !== null ? `${val.toLocaleString()} ${unit} (${period})` : '—';
+              }
+              case 'reddit_sentiment': {
+                const s = v.score;
+                if (typeof s !== 'number') return '—';
+                return `${s.toFixed(3)} ${v.note ? `(${v.note})` : ''}`.trim();
+              }
+              case 'trends': {
+                const z = v.zscore;
+                if (typeof z !== 'number') return '—';
+                return `${v.term}: z=${z.toFixed(2)} ${v.note ? `(${v.note})` : ''}`.trim();
+              }
+              case 'news_sentiment': {
+                const s = v.score;
+                if (typeof s !== 'number') return '—';
+                return `${s.toFixed(3)} (n=${v.n})`;
+              }
+            }
+            return JSON.stringify(v);
           }
         }
       }
