@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WallStonks — Sentiment & Macro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  </head>
+  <body class="bg-zinc-950 text-zinc-100">
+    <div class="min-h-screen">
+      <header class="border-b border-zinc-800 sticky top-0 backdrop-blur bg-zinc-950/80 z-10">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div class="text-xl font-semibold tracking-tight">WallStonks</div>
+          <nav class="text-sm text-zinc-300">Sentiment · Macro · Glossary</nav>
+        </div>
+      </header>
+
+      <main class="max-w-6xl mx-auto px-4 py-8" x-data="glossaryPage()" x-init="init()">
+        <section class="mb-8">
+          <h1 class="text-2xl font-semibold mb-2">Glossary & Methods</h1>
+          <p class="text-zinc-400">Click a term to expand its definition, source, latest value/state, and how we calculate it.</p>
+        </section>
+
+        <section class="mb-6 flex items-center gap-3">
+          <input class="w-full md:w-96 rounded-md bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-700" placeholder="Search terms..." x-model="query" />
+          <select class="rounded-md bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm" x-model="category">
+            <option value="">All Categories</option>
+            <template x-for="c in categories" :key="c"><option x-text="c"></option></template>
+          </select>
+        </section>
+
+        <div class="space-y-2">
+          <template x-for="item in filtered" :key="item.key">
+            <details class="group rounded-md border border-zinc-800 overflow-hidden">
+              <summary class="cursor-pointer select-none bg-zinc-900/50 hover:bg-zinc-900 px-4 py-3 flex items-center justify-between">
+                <div>
+                  <div class="font-medium" x-text="item.name"></div>
+                  <div class="text-xs text-zinc-400" x-text="item.category + ' · Source: ' + item.source"></div>
+                </div>
+                <div class="text-xs text-zinc-400">Latest: <span x-text="formatLatest(item.latest)"></span></div>
+              </summary>
+              <div class="px-4 py-4 bg-zinc-950">
+                <p class="text-sm text-zinc-300" x-text="item.definition"></p>
+                <div class="mt-3 text-xs text-zinc-400">Calculation: <code class="bg-zinc-900 border border-zinc-800 px-1 py-0.5 rounded" x-text="item.calculation"></code></div>
+                <div class="mt-4 text-xs text-zinc-500">As of <span x-text="now"></span></div>
+              </div>
+            </details>
+          </template>
+        </div>
+      </main>
+
+      <footer class="max-w-6xl mx-auto px-4 py-8 text-xs text-zinc-500">
+        Built with public data. No price-based predictive features.
+      </footer>
+    </div>
+
+    <script>
+      function glossaryPage() {
+        return {
+          items: [],
+          query: '',
+          category: '',
+          categories: ['Inflation','Labor','Growth','Activity','Confidence','Policy/Fed','Social','Trends'],
+          now: new Date().toLocaleString(),
+          async init() {
+            const res = await fetch('/api/glossary');
+            const data = await res.json();
+            this.items = data.items || [];
+          },
+          get filtered() {
+            return this.items.filter(i => {
+              const q = this.query.toLowerCase();
+              const inQuery = !q || i.name.toLowerCase().includes(q) || (i.definition||'').toLowerCase().includes(q);
+              const inCat = !this.category || i.category === this.category;
+              return inQuery && inCat;
+            });
+          },
+          formatLatest(v) {
+            if (!v) return '—';
+            if (typeof v === 'object') return JSON.stringify(v);
+            return String(v);
+          }
+        }
+      }
+    </script>
+  </body>
+  </html>
+
+

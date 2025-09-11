@@ -1,14 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-WallStonks Runner
 
-This script runs the WallStonks application directly.
-"""
-
-import sys
-from app.main import main
+import uvicorn
 
 if __name__ == "__main__":
-    print("Starting WallStonks...")
-    sys.exit(main())
+    uvicorn.run("app.web:app", host="0.0.0.0", port=8000, reload=True)
+
+
