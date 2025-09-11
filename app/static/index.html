@@ -22,6 +22,31 @@
           <p class="text-zinc-400">Click a term to expand its definition, source, latest value/state, and how we calculate it.</p>
         </section>
 
+        <section class="mb-8" x-show="!featuresLoading">
+          <h2 class="text-xl font-semibold mb-3">Daily Features</h2>
+          <template x-if="featuresError">
+            <div class="mb-3 text-sm text-red-300 bg-red-900/40 border border-red-800 rounded px-3 py-2" x-text="featuresError"></div>
+          </template>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
+              <div class="text-xs text-zinc-400">Reddit Sentiment</div>
+              <div class="text-lg font-medium" x-text="formatFeature('reddit', features.reddit_sentiment)"></div>
+            </div>
+            <div class="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
+              <div class="text-xs text-zinc-400">Trends (inflation) z</div>
+              <div class="text-lg font-medium" x-text="formatFeature('trends', features.trends_inflation_z)"></div>
+            </div>
+            <div class="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
+              <div class="text-xs text-zinc-400">PMI dev from 50</div>
+              <div class="text-lg font-medium" x-text="formatFeature('pmi', features.ism_pmi_dev_from_50)"></div>
+            </div>
+            <div class="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
+              <div class="text-xs text-zinc-400">Consumer Confidence</div>
+              <div class="text-lg font-medium" x-text="formatFeature('confidence', features.consumer_confidence)"></div>
+            </div>
+          </div>
+        </section>
+
         <section class="mb-6 flex items-center gap-3">
           <input class="w-full md:w-96 rounded-md bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-700" placeholder="Search terms..." x-model="query" />
           <select class="rounded-md bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm" x-model="category">
@@ -71,7 +96,10 @@
           error: '',
           query: '',
           category: '',
-          categories: ['Inflation','Labor','Growth','Activity','Confidence','Policy/Fed','Social','Trends'],
+          categories: ['News','Inflation','Labor','Growth','Activity','Confidence','Policy/Fed','Social','Trends'],
+          features: {},
+          featuresLoading: true,
+          featuresError: '',
           now: new Date().toLocaleString(),
           async init() {
             this.loading = true; this.error = '';
@@ -91,6 +119,25 @@
               this.error = (e && e.message) ? e.message : 'Failed to load glossary';
             } finally {
               this.loading = false;
+            }
+
+            // Load features snapshot
+            try {
+              this.featuresError = '';
+              let f;
+              try {
+                const r = await fetch('/api/features');
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                f = await r.json();
+              } catch (_) {
+                const r2 = await fetch('./data/features.json');
+                f = await r2.json();
+              }
+              this.features = f || {};
+            } catch (e) {
+              this.featuresError = (e && e.message) ? e.message : 'Failed to load features';
+            } finally {
+              this.featuresLoading = false;
             }
           },
           get filtered() {
@@ -144,6 +191,14 @@
               }
             }
             return JSON.stringify(v);
+          },
+          formatFeature(kind, value) {
+            if (value === null || value === undefined) return '—';
+            if (kind === 'reddit') return Number(value).toFixed(3);
+            if (kind === 'trends') return Number(value).toFixed(2);
+            if (kind === 'pmi') return Number(value).toFixed(1);
+            if (kind === 'confidence') return Number(value).toFixed(1);
+            return String(value);
           }
         }
       }
