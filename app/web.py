@@ -23,9 +23,12 @@ async def index(_: Request):
 
 @app.get("/api/glossary", response_class=JSONResponse)
 async def glossary():
-    # Pull latest snapshot for "latest" values
-    from app.features.aggregate import latest_snapshot
-    snap = latest_snapshot()
+    # Pull latest snapshot for "latest" values with robust fallbacks
+    try:
+        from app.features.aggregate import latest_snapshot
+        snap = latest_snapshot()
+    except Exception as e:
+        snap = {"as_of": None, "_error": f"aggregation_failed: {e}"}
     items = [
         {
             "key": "cpi",
@@ -64,6 +67,6 @@ async def glossary():
             "calculation": "z = (term_value - mean) / std",
         },
     ]
-    return JSONResponse({"items": items, "as_of": snap.get("as_of")})
+    return JSONResponse({"items": items, "as_of": snap.get("as_of"), "meta": {"error": snap.get("_error")}})
 
 
