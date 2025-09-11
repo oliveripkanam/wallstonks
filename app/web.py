@@ -23,7 +23,9 @@ async def index(_: Request):
 
 @app.get("/api/glossary", response_class=JSONResponse)
 async def glossary():
-    # Minimal stub; UI will render these items as accordions
+    # Pull latest snapshot for "latest" values
+    from app.features.aggregate import latest_snapshot
+    snap = latest_snapshot()
     items = [
         {
             "key": "cpi",
@@ -31,7 +33,7 @@ async def glossary():
             "category": "Inflation",
             "source": "BLS",
             "definition": "Measures average change over time in prices paid by consumers.",
-            "latest": None,
+            "latest": snap.get("cpi"),
             "calculation": "z = (actual - trailing_mean_k) / trailing_std_k",
         },
         {
@@ -40,7 +42,7 @@ async def glossary():
             "category": "Labor",
             "source": "BLS",
             "definition": "Change in the number of employed during the previous month, excluding farming.",
-            "latest": None,
+            "latest": snap.get("nfp"),
             "calculation": "z = (actual - trailing_mean_k) / trailing_std_k",
         },
         {
@@ -49,7 +51,7 @@ async def glossary():
             "category": "Social",
             "source": "Reddit RSS",
             "definition": "Net sentiment from selected subreddits' titles, time-decayed and weighted.",
-            "latest": None,
+            "latest": snap.get("reddit_sentiment"),
             "calculation": "score = sentiment * source_weight * time_decay",
         },
         {
@@ -58,10 +60,10 @@ async def glossary():
             "category": "Trends",
             "source": "Google Trends",
             "definition": "Week-over-week standardized change in search interest for macro terms.",
-            "latest": None,
+            "latest": snap.get("trends"),
             "calculation": "z = (term_value - mean) / std",
         },
     ]
-    return JSONResponse({"items": items})
+    return JSONResponse({"items": items, "as_of": snap.get("as_of")})
 
 
