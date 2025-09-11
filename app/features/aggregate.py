@@ -236,6 +236,16 @@ def daily_forecast_heuristic() -> Dict[str, Any]:
     ]
     drivers.sort(key=lambda d: d["contribution"], reverse=True)
 
+    # Narrative
+    tilt = "slightly positive" if composite > 0.1 else "slightly negative" if composite < -0.1 else "balanced"
+    dir_word = "up" if expected_move >= 0 else "down"
+    top = drivers[:3]
+    tops = ", ".join([f"{d['name']} {d['contribution']:+.2f}" for d in top])
+    narrative = (
+        f"Overall {tilt}. Expected open→close move {expected_move:+.2f}%. "
+        f"Prob up ~{prob_up*100:.1f}%. Top drivers: {tops}."
+    )
+
     payload = {
         "as_of": datetime.utcnow().isoformat() + "Z",
         "indices": {
@@ -252,7 +262,7 @@ def daily_forecast_heuristic() -> Dict[str, Any]:
                 "drivers": drivers,
             },
         },
-        "meta": {"model": "heuristic_v1", "notes": "Public-signal composite; no prices used."}
+        "meta": {"model": "heuristic_v1", "notes": "Public-signal composite; no prices used.", "narrative": narrative}
     }
     _set_cached("daily_forecast_heuristic", payload)
     return payload

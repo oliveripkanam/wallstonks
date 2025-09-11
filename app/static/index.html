@@ -53,6 +53,7 @@
           <template x-if="forecastError">
             <div class="mb-3 text-sm text-red-300 bg-red-900/40 border border-red-800 rounded px-3 py-2" x-text="forecastError"></div>
           </template>
+          <div class="text-sm text-zinc-300 mb-3" x-text="forecast.meta?.narrative || ''"></div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <template x-for="(v, k) in (forecast.indices || {})" :key="k">
               <div class="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
