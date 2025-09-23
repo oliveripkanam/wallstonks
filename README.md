@@ -1,16 +1,3 @@
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
 # WallStonks
 
 A simple, focused dashboard for watching public sentiment and macro context side‑by‑side—and a quick same‑day forecast for major indices (SPY/DIA). No fluff.
@@ -48,13 +35,4 @@ There’s also a short narrative that summarizes the overall tilt and drivers at
 - Skim the Daily Features to get a feel for the day’s backdrop.
 - Read the Forecast’s “Prob up”, expected move, and ranges for a quick baseline.
 - Expand items in the Glossary whenever you want more context on a signal.
-
-## Notes
-- Built from public inputs; no price‑based predictive features.
-- Signals are intentionally compact—use them as a nudge, not gospel.
-- If anything looks off, refresh the page; it’s designed to be resilient and fast.
-
-Old Website
-https://oliveripkanam.github.io/mstr-advisor/
-
 
