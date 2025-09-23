@@ -109,7 +109,12 @@
       </main>
 
       <footer class="max-w-6xl mx-auto px-4 py-8 text-xs text-zinc-500">
-        Built with public data. No price-based predictive features.
+        <div>Built with public data. No price-based predictive features.</div>
+        <div class="mt-2">
+          <span x-show="refreshMode==='static'">Next snapshot (GitHub Pages, 02:15 UTC daily): </span>
+          <span x-show="refreshMode==='dynamic'">Next live recompute (~3 min cache): </span>
+          <span class="font-medium text-zinc-300" x-text="countdownLabel"></span>
+        </div>
       </footer>
     </div>
 
@@ -129,6 +134,14 @@
           forecastLoading: true,
           forecastError: '',
           now: new Date().toLocaleString(),
+          // Countdown state
+          refreshMode: 'static', // 'static' for GitHub Pages snapshot; 'dynamic' for live API
+          countdownLabel: '—',
+          nextTime: null,
+          // Static schedule: 02:15 UTC nightly (from .github/workflows/publish.yml)
+          scheduleUtc: { hour: 2, minute: 15 },
+          // Live cache TTL (seconds), matches server-side _CACHE_TTL_SECONDS
+          cacheTtlSec: 180,
           async init() {
             this.loading = true; this.error = '';
             const useStaticOnly = window.location.hostname.endsWith('github.io');
@@ -202,6 +215,56 @@
             } finally {
               this.forecastLoading = false;
             }
+
+            // Init countdown after data loads
+            this.refreshMode = useStaticOnly ? 'static' : 'dynamic';
+            this.setupCountdown();
+          },
+          setupCountdown() {
+            const update = () => {
+              const now = new Date();
+              if (this.refreshMode === 'static') {
+                // Next 02:15 UTC
+                const next = this.nextStaticUtc(now);
+                this.nextTime = next;
+                this.countdownLabel = this.fmtCountdown(next, now);
+              } else {
+                // Dynamic: next ~3m since latest as_of among loaded payloads
+                const asOfStr = this.features?.as_of || this.forecast?.as_of || null;
+                const asOf = asOfStr ? new Date(asOfStr) : now;
+                const next = new Date(asOf.getTime() + this.cacheTtlSec * 1000);
+                if (next <= now) {
+                  // If past, roll to now + TTL (best effort)
+                  this.nextTime = new Date(now.getTime() + this.cacheTtlSec * 1000);
+                } else {
+                  this.nextTime = next;
+                }
+                this.countdownLabel = this.fmtCountdown(this.nextTime, now);
+              }
+            };
+            update();
+            setInterval(update, 1000);
+          },
+          nextStaticUtc(now) {
+            // Compute the next occurrence of scheduleUtc (in UTC) after 'now'
+            const n = new Date(now);
+            const next = new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), this.scheduleUtc.hour, this.scheduleUtc.minute, 0));
+            if (next <= now) {
+              // add 1 day
+              next.setUTCDate(next.getUTCDate() + 1);
+            }
+            return next;
+          },
+          fmtCountdown(target, now) {
+            if (!target) return '—';
+            const ms = Math.max(0, target - now);
+            const totalSec = Math.floor(ms / 1000);
+            const h = Math.floor(totalSec / 3600);
+            const m = Math.floor((totalSec % 3600) / 60);
+            const s = totalSec % 60;
+            const pad = (x) => String(x).padStart(2, '0');
+            const localStr = target.toLocaleString();
+            return `${pad(h)}:${pad(m)}:${pad(s)} (at ${localStr})`;
           },
           get filtered() {
             return this.items.filter(i => {
