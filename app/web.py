@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+from datetime import datetime
 
 app = FastAPI(title="WallStonks Web", version="2.0.0")
 
@@ -127,5 +128,108 @@ async def forecast_model():
         return JSONResponse(data)
     except Exception as e:
         return JSONResponse({"error": f"forecast_model_failed: {e}"}, status_code=500)
+
+
+@app.get("/api/health", response_class=JSONResponse)
+async def health():
+    """Quick liveness diagnostics for data sources.
+    Returns which sources are reachable/live vs falling back.
+    """
+    status = {"as_of": datetime.utcnow().isoformat() + "Z"}
+    # FRED
+    try:
+        from app.ingest.fred import get_fred_api_key, latest_value
+        api_key = get_fred_api_key()
+        fred_ok = False
+        latest_dates = {}
+        if api_key:
+            for sid in ("CPIAUCSL", "PAYEMS", "NAPM", "CONCCONF"):
+                try:
+                    lv = latest_value(sid, api_key)
+                    if lv:
+                        dt, _ = lv
+                        latest_dates[sid] = dt.strftime("%Y-%m-%d")
+                except Exception:
+                    latest_dates[sid] = None
+            fred_ok = any(v is not None for v in latest_dates.values())
+        status["fred"] = {"api_key": bool(api_key), "ok": fred_ok, "latest": latest_dates}
+    except Exception as e:
+        status["fred"] = {"api_key": False, "ok": False, "error": str(e)}
+
+    # Google Trends
+    try:
+        from app.ingest.trends import fetch_trends, TrendReq
+        trends_available = TrendReq is not None
+        tr_ok = False
+        note = None
+        if trends_available:
+            tr = fetch_trends("inflation")
+            tr_ok = tr is not None and getattr(tr, "note", "").lower().startswith("computed")
+            note = getattr(tr, "note", None)
+        status["trends"] = {"available": trends_available, "ok": tr_ok, "note": note}
+    except Exception as e:
+        status["trends"] = {"available": False, "ok": False, "error": str(e)}
+
+    # Reddit
+    try:
+        import json as _json
+        from pathlib import Path as _Path
+        from app.ingest.reddit import fetch_reddit_sentiment
+        subs = []
+        try:
+            cfg_path = _Path(__file__).parents[1] / "config" / "defaults.json"
+            cfg = _json.loads(cfg_path.read_text(encoding="utf-8"))
+            subs = cfg.get("sources", {}).get("reddit", {}).get("subreddits", [])
+        except Exception:
+            subs = []
+        red_ok = False
+        n_titles = 0
+        if subs:
+            red = fetch_reddit_sentiment(subs)
+            note = getattr(red, "note", "") or ""
+            if note.startswith("n="):
+                try:
+                    n_titles = int(note.split("=", 1)[1].split()[0])
+                except Exception:
+                    n_titles = 0
+            red_ok = n_titles > 0
+        status["reddit"] = {"configured": bool(subs), "ok": red_ok, "n_titles": n_titles}
+    except Exception as e:
+        status["reddit"] = {"configured": False, "ok": False, "error": str(e)}
+
+    # News (RSS)
+    try:
+        import json as _json
+        from pathlib import Path as _Path
+        from app.ingest.news import aggregate_news_sentiment
+        feeds = []
+        half_life = 6.0
+        try:
+            cfg_path = _Path(__file__).parents[1] / "config" / "defaults.json"
+            cfg = _json.loads(cfg_path.read_text(encoding="utf-8"))
+            news_cfg = cfg.get("sources", {}).get("news", [])
+            half_life = float(cfg.get("nlp", {}).get("decay", {}).get("news_half_life_hours", 6))
+            for entry in news_cfg:
+                feeds.append((entry.get('name', 'News'), entry.get('url', ''), float(entry.get('weight', 1.0))))
+        except Exception:
+            feeds = []
+        ns_ok = False
+        n = 0
+        if feeds:
+            ns = aggregate_news_sentiment(feeds, half_life_hours=half_life)
+            n = int(getattr(ns, "n_titles", 0) or 0)
+            ns_ok = n > 0
+        status["news"] = {"configured": bool(feeds), "ok": ns_ok, "n_titles": n}
+    except Exception as e:
+        status["news"] = {"configured": False, "ok": False, "error": str(e)}
+
+    # Overall
+    status["live"] = any([
+        status.get("fred", {}).get("ok"),
+        status.get("trends", {}).get("ok"),
+        status.get("reddit", {}).get("ok"),
+        status.get("news", {}).get("ok"),
+    ])
+    return JSONResponse(status)
 
 

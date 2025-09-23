@@ -202,8 +202,8 @@ def daily_forecast_heuristic() -> Dict[str, Any]:
         tr = fetch_trends_stub("inflation")
     s_trends = _tanh_scale(float(tr.zscore))  # ~[-1,1]
 
-    # PMI deviation from neutral 50
-    pmi = fetch_ism_pmi_stub()
+    # PMI deviation from neutral 50 (live with fallback handled in live fetcher)
+    pmi = fetch_ism_pmi_live()
     s_pmi = 0.0 if pmi.value is None else max(-1.0, min(1.0, (float(pmi.value) - 50.0) / 10.0))
 
     # News sentiment
