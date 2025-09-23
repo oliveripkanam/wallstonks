@@ -107,7 +107,7 @@ def build_health_payload():
         latest_dates = {}
         fred_ok = False
         if api_key:
-            for sid in ("CPIAUCSL", "PAYEMS", "NAPM", "CONCCONF"):
+            for sid in ("CPIAUCSL", "PAYEMS", "NAPM", "NAPMNOI", "CONCCONF", "UMCSENT"):
                 try:
                     lv = latest_value(sid, api_key)
                     if lv:

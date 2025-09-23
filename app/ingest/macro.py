@@ -130,18 +130,31 @@ def fetch_ism_pmi_live() -> MacroValue:
     if not api_key:
         return fetch_ism_pmi_stub()
     try:
+        # Primary: PMI composite
         lv = latest_value("NAPM", api_key)
-        if not lv:
-            return fetch_ism_pmi_stub()
-        dt_now, val = lv
-        return MacroValue(
-            key="ism_pmi",
-            label="ISM Manufacturing PMI",
-            value=round(val, 1),
-            unit="index",
-            period=dt_now.strftime("%b %Y"),
-            as_of=datetime.utcnow(),
-        )
+        if lv:
+            dt_now, val = lv
+            return MacroValue(
+                key="ism_pmi",
+                label="ISM Manufacturing PMI",
+                value=round(val, 1),
+                unit="index",
+                period=dt_now.strftime("%b %Y"),
+                as_of=datetime.utcnow(),
+            )
+        # Fallback: ISM New Orders Index as proxy directionally
+        lv_alt = latest_value("NAPMNOI", api_key)
+        if lv_alt:
+            dt_now, val = lv_alt
+            return MacroValue(
+                key="ism_pmi",
+                label="ISM New Orders Index (proxy PMI)",
+                value=round(val, 1),
+                unit="index",
+                period=dt_now.strftime("%b %Y"),
+                as_of=datetime.utcnow(),
+            )
+        return fetch_ism_pmi_stub()
     except Exception:
         return fetch_ism_pmi_stub()
 
@@ -155,18 +168,31 @@ def fetch_confidence_live() -> MacroValue:
     if not api_key:
         return fetch_confidence_stub()
     try:
+        # Primary: Conference Board (may be unavailable on FRED)
         lv = latest_value("CONCCONF", api_key)
-        if not lv:
-            return fetch_confidence_stub()
-        dt_now, val = lv
-        return MacroValue(
-            key="confidence",
-            label="Consumer Confidence (Conference Board)",
-            value=round(val, 1),
-            unit="index",
-            period=dt_now.strftime("%b %Y"),
-            as_of=datetime.utcnow(),
-        )
+        if lv:
+            dt_now, val = lv
+            return MacroValue(
+                key="confidence",
+                label="Consumer Confidence (Conference Board)",
+                value=round(val, 1),
+                unit="index",
+                period=dt_now.strftime("%b %Y"),
+                as_of=datetime.utcnow(),
+            )
+        # Fallback: University of Michigan Consumer Sentiment (UMCSENT)
+        lv_alt = latest_value("UMCSENT", api_key)
+        if lv_alt:
+            dt_now, val = lv_alt
+            return MacroValue(
+                key="confidence",
+                label="Consumer Sentiment (U. Michigan)",
+                value=round(val, 1),
+                unit="index",
+                period=dt_now.strftime("%b %Y"),
+                as_of=datetime.utcnow(),
+            )
+        return fetch_confidence_stub()
     except Exception:
         return fetch_confidence_stub()
 
