@@ -1,53 +1,60 @@
-# WallStonks — Public Sentiment & Macro Forecast
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+# WallStonks
 
-Single‑page site that aggregates public news, macro releases, Reddit sentiment, and Google Trends to explain and forecast the same‑day move of major indices (SPY/DIA). Built for GitHub Pages (static) and FastAPI (local dev).
+A simple, focused dashboard for watching public sentiment and macro context side‑by‑side—and a quick same‑day forecast for major indices (SPY/DIA). No fluff.
 
-## What this is
-- A public‑data dashboard with an interactive Glossary & Methods page
-- A “Daily Features” snapshot (Reddit, Trends, PMI, Confidence)
-- A simple “Daily Forecast” (probability up, expected move, ranges, drivers)
+## What you’ll see
 
-## What we track
-- News (RSS): Reuters Business/Markets, CNBC Markets
-- Social: Reddit RSS — r/wallstreetbets, r/investing, r/stocks, r/economy
-- Trends: Google Trends (inflation, recession, rate cut, layoffs, CPI, FOMC)
-- Macro: CPI/NFP (stubs for now), ISM Manufacturing PMI, Consumer Confidence
+### Glossary & Methods
+An interactive list of the signals used, with plain‑English definitions and the latest reading:
+- News Sentiment (from major RSS headlines)
+- Reddit Sentiment (from a few finance subreddits)
+- Google Trends (simple week‑over‑week z‑scores for macro terms)
+- ISM Manufacturing PMI and Consumer Confidence
 
-## How we calculate (concise)
-- News sentiment: VADER on recent headlines → average; source‑weighted, time‑decay planned
-- Reddit sentiment: VADER on post titles → average
-- Trends: WoW z‑score of term interest (pytrends)
-- Macro: PMI deviation from neutral 50; other releases to use surprise vs trailing baseline
-- Forecast (heuristic v1): weighted composite of News/Reddit/Trends/PMI →
-  - direction_prob_up = (composite + 1) / 2
-  - expected_move_pct = scale × composite (±~0.6% at full tilt)
-  - intervals: rough 50% and 80% symmetric bands
+Click any item to expand and see what it means and how it’s derived.
 
-## Run locally (dev)
-```bash
-python -m venv .venv && .\.venv\Scripts\activate
-pip install -r requirements.txt
-npm install && npm run build:css
-python run.py  # http://localhost:8000
-```
+### Daily Features (top row)
+Quick tiles that summarize today’s inputs:
+- Reddit net sentiment
+- Trends (inflation) z‑score
+- PMI distance from neutral (50)
+- Consumer Confidence level
 
-## Static preview (like GitHub Pages)
-```bash
-npm run build:css
-python -m app.report.export_static
-cd docs && python -m http.server 8080  # http://localhost:8080
-```
+These are the building blocks behind the forecast below.
 
-## Deploy to GitHub Pages
-1) Settings → Pages → Source: “Deploy from a branch”; Branch: `main`; Folder: `/docs`
-2) A nightly GitHub Actions workflow regenerates `docs/` automatically
+### Daily Forecast (SPY / DIA)
+A compact view of what today might look like using only public signals:
+- Probability the index closes higher (“Prob up”)
+- Expected move (open → close)
+- Two rough ranges (50% and 80%)
+- Top drivers with their push/pull
 
-## Update frequency
-- Local dev: computed on request; cached for 3 minutes (see `app/features/aggregate.py`)
-- GitHub Pages: refreshed nightly at 02:15 UTC (see `.github/workflows/publish.yml`)
+There’s also a short narrative that summarizes the overall tilt and drivers at a glance.
+
+## How to use it
+- Skim the Daily Features to get a feel for the day’s backdrop.
+- Read the Forecast’s “Prob up”, expected move, and ranges for a quick baseline.
+- Expand items in the Glossary whenever you want more context on a signal.
 
 ## Notes
-- Public‑only inputs; no price‑based predictive features
-- Future work: FinBERT, zero‑shot topics, macro surprise parsing, trained models
+- Built from public inputs; no price‑based predictive features.
+- Signals are intentionally compact—use them as a nudge, not gospel.
+- If anything looks off, refresh the page; it’s designed to be resilient and fast.
+
+Old Website
+https://oliveripkanam.github.io/mstr-advisor/
 
 

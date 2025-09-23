@@ -4,7 +4,10 @@
 from typing import Dict, Any
 from datetime import datetime
 
-from app.ingest.macro import fetch_cpi_stub, fetch_nfp_stub, fetch_ism_pmi_stub, fetch_confidence_stub
+from app.ingest.macro import (
+    fetch_cpi_stub, fetch_nfp_stub, fetch_ism_pmi_stub, fetch_confidence_stub,
+    fetch_cpi_yoy_live, fetch_nfp_live, fetch_ism_pmi_live, fetch_confidence_live,
+)
 from app.ingest.reddit import fetch_reddit_sentiment_stub, fetch_reddit_sentiment
 from app.ingest.trends import fetch_trends_stub, fetch_trends
 from app.ingest.news import aggregate_news_sentiment
@@ -38,10 +41,11 @@ def latest_snapshot() -> Dict[str, Any]:
     cached = _get_cached("latest_snapshot")
     if cached is not None:
         return cached
-    cpi = fetch_cpi_stub()
-    nfp = fetch_nfp_stub()
-    pmi = fetch_ism_pmi_stub()
-    conf = fetch_confidence_stub()
+    # Prefer live; each live function falls back to stub if no API key or failure
+    cpi = fetch_cpi_yoy_live()
+    nfp = fetch_nfp_live()
+    pmi = fetch_ism_pmi_live()
+    conf = fetch_confidence_live()
     # Load config for reddit subs
     reddit = fetch_reddit_sentiment_stub()
     try:
@@ -140,8 +144,8 @@ def features_snapshot() -> Dict[str, Any]:
         tr = fetch_trends_stub("inflation")
 
     # Macro levels (use stubs for now)
-    pmi = fetch_ism_pmi_stub()
-    conf = fetch_confidence_stub()
+    pmi = fetch_ism_pmi_live()
+    conf = fetch_confidence_live()
 
     features: Dict[str, Any] = {
         "as_of": datetime.utcnow().isoformat() + "Z",
