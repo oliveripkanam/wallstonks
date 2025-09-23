@@ -68,10 +68,13 @@ def latest_snapshot() -> Dict[str, Any]:
     try:
         feeds = []
         news_cfg = cfg.get("sources", {}).get("news", []) if 'cfg' in locals() else []
+        half_life = 6.0
+        if 'cfg' in locals():
+            half_life = float(cfg.get("nlp", {}).get("decay", {}).get("news_half_life_hours", 6))
         for entry in news_cfg:
-            feeds.append((entry.get('name', 'News'), entry.get('url', '')))
+            feeds.append((entry.get('name', 'News'), entry.get('url', ''), float(entry.get('weight', 1.0))))
         if feeds:
-            news = aggregate_news_sentiment(feeds)
+            news = aggregate_news_sentiment(feeds, half_life_hours=half_life)
     except Exception:
         news = None
 
@@ -208,10 +211,11 @@ def daily_forecast_heuristic() -> Dict[str, Any]:
     try:
         feeds = []
         news_cfg = cfg.get("sources", {}).get("news", [])
+        half_life = float(cfg.get("nlp", {}).get("decay", {}).get("news_half_life_hours", 6))
         for entry in news_cfg:
-            feeds.append((entry.get('name', 'News'), entry.get('url', '')))
+            feeds.append((entry.get('name', 'News'), entry.get('url', ''), float(entry.get('weight', 1.0))))
         if feeds:
-            ns = aggregate_news_sentiment(feeds)
+            ns = aggregate_news_sentiment(feeds, half_life_hours=half_life)
             s_news = max(-1.0, min(1.0, float(ns.score)))
     except Exception:
         s_news = 0.0
