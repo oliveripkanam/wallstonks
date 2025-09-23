@@ -38,7 +38,7 @@ async def glossary():
             "source": "RSS (Reuters, CNBC, etc.)",
             "definition": "Average VADER compound sentiment across recent curated headlines.",
             "latest": snap.get("news_sentiment"),
-            "calculation": "avg(VADER_compound(headlines))",
+            "calculation": "weighted_avg(VADER_compound(headlines)) with time_decay",
         },
         {
             "key": "cpi",
@@ -81,9 +81,9 @@ async def glossary():
             "name": "Reddit Sentiment",
             "category": "Social",
             "source": "Reddit RSS",
-            "definition": "Net sentiment from selected subreddits' titles, time-decayed and weighted.",
+            "definition": "Average sentiment from selected subreddits' recent post titles.",
             "latest": snap.get("reddit_sentiment"),
-            "calculation": "score = sentiment * source_weight * time_decay",
+            "calculation": "avg(VADER_compound(titles))",
         },
         {
             "key": "trends",
